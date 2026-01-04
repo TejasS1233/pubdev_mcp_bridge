@@ -228,12 +228,16 @@ final class PubdevMcpServer extends MCPServer with ToolsSupport {
       Tool(
         name: 'list_extensions',
         description:
-            'List all extension methods in the ${package.name} package.',
+            'List all extensions in the ${package.name} package. '
+            'Optionally filter by the type they extend using substring '
+            'matching (e.g., "List" finds List<int>, List<String>, etc.).',
         inputSchema: ObjectSchema(
           properties: {
             'on_type': StringSchema(
               description:
-                  'Optional: filter extensions by the type they extend',
+                  'Filter by the type the extension extends. Uses '
+                  'case-insensitive substring matching to find all related '
+                  'extensions (e.g., "Map" finds Map<K,V>, Map<String,int>).',
             ),
           },
         ),
@@ -496,16 +500,14 @@ final class PubdevMcpServer extends MCPServer with ToolsSupport {
     final args = request.arguments ?? {};
     final onType = args['on_type'] as String?;
 
-    var extensions = package.allExtensions;
-
-    // Filter by on_type if provided
-    if (onType != null && onType.isNotEmpty) {
-      final onTypeLower = onType.toLowerCase();
-      extensions =
-          extensions
-              .where((e) => e.onType.toLowerCase().contains(onTypeLower))
-              .toList();
-    }
+    final extensions =
+        (onType != null && onType.isNotEmpty)
+            ? package.allExtensions
+                .where(
+                  (e) => e.onType.toLowerCase().contains(onType.toLowerCase()),
+                )
+                .toList()
+            : package.allExtensions;
 
     if (extensions.isEmpty) {
       final msg =
@@ -518,7 +520,8 @@ final class PubdevMcpServer extends MCPServer with ToolsSupport {
     final text = extensions
         .map(
           (e) =>
-              '${e.name} on ${e.onType}${e.description != null ? ' - ${e.description}' : ''}',
+              '${e.name} on ${e.onType}'
+              '${e.description != null ? ' - ${e.description}' : ''}',
         )
         .join('\n');
 
